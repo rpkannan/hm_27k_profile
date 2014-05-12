@@ -6,16 +6,12 @@ import cluster_methods as clust
 
 cancers = ["brca","coad","gbm","kirc","luad","lusc","ov","ucec"]
 source_path = os.getcwd()+"/Output/"
+source_path = "/Users/rathikannan/Documents/hm_27k_profile/Output/"
 
-for cancer in cancers:	
-	dict = {}
-	f_open = open(out_path+"brca/probe_dict_dis.txt","r").readlines()
-	for line in f_open:
-		line = line.strip().split('\t')
-		if line[0] == "Samples":
-			continue
-		else:
-			dict[line[0]] = [float(i) for i in line[1:]]
+for cancer in cancers:
+
+	# Read probe dict from txt
+	probe_dict = clust.read_probe_dict(source_path+cancer+"/probe_dict_dis.txt")	
 	
 	# Convert dictionary to matrix
 	# Rows are samples

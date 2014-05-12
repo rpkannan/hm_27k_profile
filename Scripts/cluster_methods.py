@@ -1,8 +1,6 @@
 import os
 import cPickle as pickle
 import numpy as np
-import scipy.cluster.hierarchy as hier
-import matplotlib.pylab as plt
 
 ############################## DATA STRUCTURE CONVERSION #################################
 '''
@@ -35,13 +33,32 @@ Rows: indexed by probe/gene ID
 Columns: indexed by barcode
 '''
 def dict_to_matrix_2(dict):
-	data_matrix = read_to_matrix_1(dict)
+	data_matrix = dict_to_matrix_1(dict)
 	data_matrix = data_matrix.transpose()
 	return data_matrix
 
 ############################## READ DICT FROM TXT ##################################
+def read_probe_dict(file_name):
+	dict = {}
+	f_open = open(file_name,"r").readlines()
+	for line in f_open:
+		line = line.strip().split('\t')
+		if line[0] == "Samples":
+			continue
+		else:
+			dict[line[0]] = [float(i) for i in line[1:]]
+	return dict
 
-def read_probe_dict(file_name)
+################################ WRITE PROBE DICT TO TXT #################################
+probes_27_short = open("/Users/rathikannan/Documents/hm_27k_profile/Annotation/probes_27_short.txt","r").readline().strip().split('\t')
+def probe_dict_to_txt(probe_dict,file_name):
+	f_out = open(file_name,"w")
+	f_line = ["Samples"] + probes_27_short
+	f_out.write('\t'.join(f_line)+'\n')
+	for barcode in probe_dict:
+		f_out.write('\t'.join([str(i) for i in probe_dict[barcode]])+'\n')
+	f_out.close()
+	return
 
 ################################# FREQUENCY MEASURES #####################################
 
@@ -61,6 +78,42 @@ def freq(np_ls):
 	sums[2] = sum(np_ls == 2)
 	sums[3] = sum(np.isnan(np_ls))
 	return sums
+
+'''
+Calculates a resolved methylation score.
+
+Input: a list of discretized beta values
+Output: single float score of value: 0.0,1.0,2.0,np.nan
+
+Scoring Algorithm: 
+If input list has only one value, that values is returned.
+If input list has 2+ values, the score with the highest frequency of occurrence is returned. 
+If there is a tie, the following hierarchy is used as the tie break: 2 > 0 > 1 > NA
+'''
+def resolve(ls):
+	ls = np.array(ls)
+	sums = [0]*4
+	sums[0] = sum(ls == 0)
+	sums[1] = sum(ls == 1)
+	sums[2] = sum(ls == 2)
+	sums[3] = sum(np.isnan(ls))
+	
+	max_val = np.argwhere(sums == np.amax(sums))
+	
+	if len(max_val) > 1:
+		if 2 in max_val:
+			return 2.0
+		elif 0 in max_val:
+			return 0.0
+		elif  1 in max_val:
+			return 1.0
+		else:
+			return np.nan
+	else:
+		if max_val[0,0] == 3:
+			return np.nan
+		else:
+			return float(max_val[0,0])
 
 ################################## HAMMING DISTANCE ######################################
 '''
@@ -152,28 +205,5 @@ def hamming_lower_csv(data_matrix, file_name):
 	f_out.close()
 	return
 
-############################## CLUSTER & VISUALIZE #######################################	
-# Uses a reduced distance matrix to perform hierarchical clustering
-# Returns a linkage matrix
-def cluster(red_dist_matrix,i_method):
-	linkage_matrix = hier.linkage(red_dist_matrix, method=i_method)
-	return linkage_matrix
 
-# Creates a distance labeled dendrogram from an input linkage matrix
-def augmented_dendrogram(*args, **kwargs):
-    ddata = hier.dendrogram(*args, **kwargs)
-    if not kwargs.get('no_plot', False):
-        for i, d in zip(ddata['icoord'], ddata['dcoord']):
-            x = 0.5 * sum(i[1:3])
-            y = d[1]
-            plt.plot(x, y, 'ro')
-            plt.annotate("%.3g" % y, (x, y), xytext=(0, -8),textcoords='offset points',va='top', ha='center')
-    return ddata
-
-def save_image(file_name):
-	plt.savefig(file_name)
-	return
-
-
-	  
 	
