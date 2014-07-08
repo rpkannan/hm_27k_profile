@@ -6,7 +6,7 @@ import cluster_methods as clust
 
 cancers = ["brca","coad","gbm","kirc","luad","lusc","ov","ucec"]
 source_path = os.getcwd()+"/Output/"
-source_path = "/Users/rathikannan/Documents/hm_27k_profile/Output/"
+source_path = "/Users/rathikannan/Documents/hm_27k_profile/Output/" 
 
 for cancer in cancers:
 

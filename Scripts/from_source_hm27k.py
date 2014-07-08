@@ -35,8 +35,6 @@ Object type: list indexed by probes_27.txt that has value True if corresponding 
 
 import sys, os, time
 import numpy as np
-import cPickle as pickle
-import pandas as pd
 
 ###################### MUST BE SET BEFORE USING OTHER METHODS ############################
 version = "None"
@@ -64,9 +62,25 @@ def set_out_path(path):
 	out_path = path
 	return
 
+#################################### DIAGNOSTICS #########################################
+def get_up_path():
+	global up_path
+	return up_path
+
+def get_out_path():
+	global out_path
+	return out_path	
+
+def get_barcodes(probe_dict,file_name):
+	global out_path
+	barcodes = []
+	f_out = open(out_path+file_name,"w")
+	f_out.write("\t".join(probe_dict.keys()))
+	return probe_dict.keys()
+		
 ################################# GLOBAL OBJECTS #########################################
-probes_27 = open(os.getcwd()+"/Annotation/probes_27.txt","r").readline().strip().split('\t')
-island_status = open(os.getcwd()+"/Annotation/island_status.txt","r").readline().strip().split('\t')
+probes_27 = open(str(os.getcwd()).replace("Scripts","/Annotation/probes_27.txt"),"r").readline().strip().split('\t')
+island_status = open(str(os.getcwd()).replace("Scripts","/Annotation/island_status.txt"),"r").readline().strip().split('\t')
 
 ############################### DATA EXTRACTION METHODS ##################################
 '''
@@ -180,12 +194,12 @@ def extract_betas_B(fileName,discrete):
 '''
 Arguments:
 manifest: dictionary
-file_out: file name without file path
-discrete: True or False
+file_name: file name without file path
+discrete: True or False; discretize or not
 Returns: A dictionary with keys: barcode, values: list of float beta values indexed by probes_27.txt
 
 '''
-def build_probe_dict(manifest, file_out, discrete):
+def build_probe_dict(manifest, file_name, discrete):
 	
 	global out_path, probes_27, version
 	samples = sorted(manifest.keys())
@@ -210,15 +224,22 @@ def build_probe_dict(manifest, file_out, discrete):
 				else:
 					sorted_betas.append(np.nan)
 			probe_dict[s] = np.array(sorted_betas)
-	if file_out == "NA":
+	if file_name == "NA":
 		return probe_dict
 	else:
-		pickle.dump(probe_dict,open(out_path+file_out,"wb"))
+		f_out = open(out_path+file_name,"w")
+		f_line = ["Samples"]+probes_27
+		f_out.write('\t'.join(f_line)+'\n')
+		barcodes = sorted(probe_dict.keys())
+		for b in barcodes:
+			f_out.write(b+'\t')
+			f_out.write('\t'.join(str(a) for a in probe_dict[b]))
+			f_out.write('\n')
+		f_out.close()
 		return probe_dict
 	
 	
-'''
-'''
+
 def remove_SNPs(probe_dict,file_name):
 	global out_path, probes_27
 	
@@ -243,6 +264,7 @@ def remove_SNPs(probe_dict,file_name):
 			f_out.write('\n')
 		f_out.close()
 		return pd_1
+
 
 '''
 Arguments:
@@ -278,7 +300,7 @@ def betas_to_list(manifest, file_out):
 	if file_out == "NA":
 		return all_betas
 	else:
-		pickle.dump(all_betas,open(out_path+file_out,"wb"))
+		#pickle.dump(all_betas,open(out_path+file_out,"wb"))
 		return all_betas
 
 '''
@@ -340,15 +362,12 @@ def betas_to_list_by_island(manifest, file_out1, file_out2):
 	f_out = open(file_out2,"w")
 	f_out.write('\t'.join(str(i) for i in all_betas_nonisland))
 	f_out.close()
-	#pickle.dump(all_betas_island,open(out_path+file_out1,"wb"))
-	#pickle.dump(all_betas_nonisland,open(out_path+file_out2,"wb"))
 	return 
 
 #################################### MAIN METHOD #########################################
 
-
-up_path = os.getcwd()+"/Input/"
-out_path = os.getcwd()+"/Output/"
+main_up_path = os.getcwd().replace("Scripts","Input/")
+main_out_path = os.getcwd().replace("Scripts","Output/")
 
 cancers = ["brca","coad","gbm","kirc","luad","lusc","ov","ucec"]
 cancers_A = ["brca","coad","gbm","lusc","ov"]
@@ -358,12 +377,14 @@ for cancer in cancers_A:
 	print "Started: "+str(cancer)
 	
 	set_version("A")
-	set_up_path(up_path+str(cancer)+"/")
-	set_out_path(out_path+str(cancer)+"/")
+	set_up_path(main_up_path+str(cancer)+"/")
+	print get_up_path()
+	set_out_path(main_out_path+str(cancer)+"/")
+	print get_out_path()
 	
 	manifest = load_manifest()
-	probe_dict = build_probe_dict(manifest,"NA",True)
-	probe_dict_r = remove_SNPs(probe_dict,"probe_dict_dis.txt",True)
+	probe_dict = build_probe_dict(manifest,"all_raw_betas.txt",False)
+	probe_dict_r = remove_SNPs(probe_dict,"probe_dict_dis.txt")
 	betas_to_list_by_island(manifest,"betas_raw_island.txt","betas_raw_nonisland.txt")
 	
 	print "Finished: "+str(cancer)
@@ -372,12 +393,12 @@ for cancer in cancers_B:
 	print "Started: "+str(cancer)
 	
 	set_version("B")
-	set_up_path(up_path+str(cancer)+"/")
-	set_out_path(out_path+str(cancer)+"/")
+	set_up_path(main_up_path+str(cancer)+"/")
+	set_out_path(main_out_path+str(cancer)+"/")
 	
 	manifest = load_manifest()
-	probe_dict = build_probe_dict(manifest,"NA",True)
-	probe_dict_r = remove_SNPs(probe_dict,"probe_dict_dis.txt",True)
+	probe_dict = build_probe_dict(manifest,"all_raw_betas.txt",True)
+	probe_dict_r = remove_SNPs(probe_dict,"probe_dict_dis.txt")
 	betas_to_list_by_island(manifest,"betas_raw_island.txt","betas_raw_nonisland.txt")
 
 	print "Finished: "+str(cancer)
